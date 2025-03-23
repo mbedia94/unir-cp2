@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-k8s
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp-k8s
+  template:
+    metadata:
+      labels:
+        app: webapp-k8s
+    spec:
+      containers:
+        - name: webapp-k8s
+          image: mbediauniracr.azurecr.io/webapp-k8s:casopractico2
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: /app/data
+              name: webapp-storage
+      volumes:
+        - name: webapp-storage
+          persistentVolumeClaim:
+            claimName: webapp-k8s-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-k8s-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: webapp-k8s
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

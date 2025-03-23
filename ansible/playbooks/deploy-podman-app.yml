@@ -1,0 +1,51 @@
+---
+- name: Deploy webapp-podman container
+  hosts: webserver
+  become: yes
+
+  vars_files:
+    - ../secrets.yml
+
+  vars:
+    image_name: mbediauniracr.azurecr.io/webapp-podman:casopractico2
+
+  tasks:
+    - name: Login to ACR from Podman
+      containers.podman.podman_login:
+        registry: "{{ acr_server }}"
+        username: "{{ acr_username }}"
+        password: "{{ acr_password }}"
+
+    - name: Pull image from ACR
+      containers.podman.podman_image:
+        name: "{{ image_name }}"
+        state: present
+
+    - name: Run container
+      containers.podman.podman_container:
+        name: webapp-podman
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "443:443"
+
+    - name: Create systemd service for container
+      containers.podman.podman_generate_systemd:
+        name: webapp-podman
+        dest: /etc/systemd/system
+        restart_policy: always
+        container_prefix: "container"
+        no_header: true
+        new: true
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start service
+      systemd:
+        name: container-webapp-podman.service
+        enabled: yes
+        state: started
+        daemon_reload: yes

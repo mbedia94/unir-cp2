@@ -1,0 +1,47 @@
+---
+- name: Desplegar aplicación webapp-k8s en AKS
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    ansible_python_interpreter: "{{ lookup('env', 'VIRTUAL_ENV') + '/bin/python' }}"
+    resource_group: rg-unir-cp2
+    cluster_name: aks-unir-cp2
+    kubeconfig_path: /home/{{ lookup('env','USER') }}/.kube/config
+
+  tasks:
+    - name: Obtener credenciales del cluster AKS
+      ansible.builtin.command: >
+        az aks get-credentials
+        --resource-group {{ resource_group }}
+        --name {{ cluster_name }}
+        --overwrite-existing
+      register: get_credentials
+      changed_when: "'Merged' in get_credentials.stdout"
+
+    - name: Aplicar PVC
+      kubernetes.core.k8s:
+        state: present
+        src: ../../k8s/pvc.yaml
+        kubeconfig: "{{ kubeconfig_path }}"
+        namespace: default
+
+    - name: Aplicar Deployment + Service
+      kubernetes.core.k8s:
+        state: present
+        src: ../../k8s/deployment.yaml
+        kubeconfig: "{{ kubeconfig_path }}"
+        namespace: default
+
+    - name: Esperar a que el LoadBalancer tenga IP pública
+      ansible.builtin.command: >
+        kubectl get svc webapp-k8s-service -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
+      register: svc_ip
+      until: svc_ip.stdout != ""
+      retries: 10
+      delay: 15
+
+    - name: Mostrar IP pública
+      ansible.builtin.debug:
+        msg: "La app webapp-k8s está accesible en http://{{ svc_ip.stdout }}"

@@ -1,0 +1,29 @@
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+
+# Ansible
+.env
+secrets.yml
+
+# Entornos virtuales
+venv/
+env/
+.unir-venv/
+
+# Archivos temporales
+*.log
+*.bak
+*.swp
+*.swo
+*.tmp
+
+# Archivos del editor
+.vscode/
+.idea/
